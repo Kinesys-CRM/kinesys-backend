@@ -1,7 +1,7 @@
 """Model for linking Google Calendar events to CRM leads."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -25,10 +25,6 @@ class CalendarEventLink(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # Relationships
-    lead: "Lead | None" = Relationship(back_populates="calendar_events")
+    # Relationships - use Optional["X"] for nullable relationships (SQLAlchemy can't parse "X | None")
+    lead: Optional["Lead"] = Relationship(back_populates="calendar_events")
     user: "User" = Relationship(back_populates="calendar_event_links")
-
-    class Config:
-        # Ensure unique constraint on google_event_id per user
-        pass

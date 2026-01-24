@@ -16,10 +16,15 @@ app = FastAPI(
 # CORS: When allow_credentials=True, allow_origins cannot be "*"
 # Specify the frontend origin(s) explicitly
 ALLOWED_ORIGINS = [
+    # Development
     "http://localhost:5173",  # Vite dev server
     "http://localhost:3000",  # Alternative dev port
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    # Production
+    "https://remiscus.me",
+    "https://www.remiscus.me",
+    "https://app.remiscus.me",  # If frontend is deployed here
 ]
 
 app.add_middleware(
