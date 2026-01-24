@@ -54,8 +54,8 @@ class LeadStageHistoryResponse(BaseModel):
 
     id: UUID
     lead_id: UUID
-    from_stage: LeadStage | None
-    to_stage: LeadStage
+    from_stage: str | None
+    to_stage: str
     changed_by: UUID
     changed_at: datetime
     notes: str | None
@@ -96,6 +96,18 @@ class LeadCreate(BaseModel):
             return f"https://{v}"
         return v
 
+    def model_dump(self, **kwargs) -> dict[str, Any]:
+        """Override to convert enums to their string values."""
+        data = super().model_dump(**kwargs)
+        # Convert enum instances to their string values for DB storage
+        if "source" in data and data["source"] is not None:
+            data["source"] = data["source"].value if hasattr(data["source"], "value") else str(data["source"])
+        if "stage" in data and data["stage"] is not None:
+            data["stage"] = data["stage"].value if hasattr(data["stage"], "value") else str(data["stage"])
+        if "temperature" in data and data["temperature"] is not None:
+            data["temperature"] = data["temperature"].value if hasattr(data["temperature"], "value") else str(data["temperature"])
+        return data
+
 
 class LeadUpdate(BaseModel):
     """Schema for updating a lead. All fields optional."""
@@ -124,6 +136,18 @@ class LeadUpdate(BaseModel):
     tag_ids: list[UUID] | None = None
     stage_change_notes: str | None = None  # Notes for stage change history
 
+    def model_dump(self, **kwargs) -> dict[str, Any]:
+        """Override to convert enums to their string values."""
+        data = super().model_dump(**kwargs)
+        # Convert enum instances to their string values for DB storage
+        if "source" in data and data["source"] is not None:
+            data["source"] = data["source"].value if hasattr(data["source"], "value") else str(data["source"])
+        if "stage" in data and data["stage"] is not None:
+            data["stage"] = data["stage"].value if hasattr(data["stage"], "value") else str(data["stage"])
+        if "temperature" in data and data["temperature"] is not None:
+            data["temperature"] = data["temperature"].value if hasattr(data["temperature"], "value") else str(data["temperature"])
+        return data
+
 
 class LeadResponse(BaseModel):
     """Schema for lead response matching frontend expectations."""
@@ -143,10 +167,10 @@ class LeadResponse(BaseModel):
     job_title: str | None
     industry: str | None
     status: str
-    stage: LeadStage
-    temperature: LeadTemperature
+    stage: str  # Stored as string in DB
+    temperature: str  # Stored as string in DB
     lead_score: int
-    source: LeadSource
+    source: str  # Stored as string in DB
     annual_revenue: str | None
     employee_count: str | None
     territory: str | None

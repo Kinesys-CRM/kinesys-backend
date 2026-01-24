@@ -52,7 +52,8 @@ async def get_leads(
 
     # Apply stage filter
     if stage:
-        query = query.where(Lead.stage == stage)
+        stage_value = stage.value if hasattr(stage, "value") else stage
+        query = query.where(Lead.stage == stage_value)
 
     # Apply temperature filter
     if temperature:
@@ -169,12 +170,13 @@ async def update_lead(
     lead.last_activity_at = datetime.now(timezone.utc)
 
     # Handle stage change history
-    if lead_in.stage and lead_in.stage != old_stage:
+    new_stage = lead_in.stage.value if hasattr(lead_in.stage, "value") else lead_in.stage
+    if new_stage and new_stage != old_stage:
         await record_stage_change(
             db,
             lead_id=lead.id,
             from_stage=old_stage,
-            to_stage=lead_in.stage,
+            to_stage=new_stage,
             changed_by=changed_by,
             notes=lead_in.stage_change_notes,
         )
@@ -222,7 +224,10 @@ async def get_leads_by_stage(
     # Group by stage
     grouped: dict[str, list[Lead]] = {stage.value: [] for stage in LeadStage}
     for lead in leads:
-        grouped[lead.stage.value].append(lead)
+        # lead.stage is now a string, not an enum
+        stage_key = lead.stage if isinstance(lead.stage, str) else lead.stage.value
+        if stage_key in grouped:
+            grouped[stage_key].append(lead)
 
     return grouped
 
@@ -230,16 +235,20 @@ async def get_leads_by_stage(
 async def record_stage_change(
     db: AsyncSession,
     lead_id: UUID,
-    from_stage: LeadStage | None,
-    to_stage: LeadStage,
+    from_stage: str | None,
+    to_stage: str,
     changed_by: UUID,
     notes: str | None = None,
 ) -> LeadStageHistory:
     """Record a stage change in history."""
+    # Convert enum to string value if needed
+    from_stage_str = from_stage.value if hasattr(from_stage, "value") else from_stage
+    to_stage_str = to_stage.value if hasattr(to_stage, "value") else to_stage
+
     history = LeadStageHistory(
         lead_id=lead_id,
-        from_stage=from_stage,
-        to_stage=to_stage,
+        from_stage=from_stage_str,
+        to_stage=to_stage_str,
         changed_by=changed_by,
         notes=notes,
     )

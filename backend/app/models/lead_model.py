@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, Text, Index
+from sqlalchemy import DateTime, String, Text, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -61,9 +61,10 @@ class LeadBase(SQLModel):
     website: str | None = Field(default=None, max_length=500)
     job_title: str | None = Field(default=None, max_length=100)
     industry: str | None = Field(default=None, max_length=100)
-    source: LeadSource = Field(default=LeadSource.OTHER)
-    stage: LeadStage = Field(default=LeadStage.NEW, index=True)
-    temperature: LeadTemperature = Field(default=LeadTemperature.COLD)
+    # Store enums as VARCHAR - Python enums validate, DB stores string value
+    source: str = Field(default=LeadSource.OTHER.value, sa_type=String(50))
+    stage: str = Field(default=LeadStage.NEW.value, sa_type=String(50), index=True)
+    temperature: str = Field(default=LeadTemperature.COLD.value, sa_type=String(20))
     lead_score: int = Field(default=0, ge=0, le=100)
     annual_revenue: str | None = Field(default=None, max_length=50)
     employee_count: str | None = Field(default=None, max_length=50)
@@ -117,9 +118,17 @@ class Lead(BaseUUIDModel, LeadBase, SoftDeleteMixin, table=True):
         return f"{self.first_name} {self.last_name}"
 
     @property
+    def modified(self) -> datetime:
+        """Alias for updated_at for backward compatibility."""
+        return self.updated_at or self.created_at
+
+    @property
     def status(self) -> str:
         """Status display name derived from stage."""
-        return self.stage.label
+        try:
+            return LeadStage(self.stage).label
+        except ValueError:
+            return self.stage.capitalize() if self.stage else "Unknown"
 
 
 class LeadStageHistory(BaseUUIDModel, table=True):
@@ -128,8 +137,8 @@ class LeadStageHistory(BaseUUIDModel, table=True):
     __tablename__ = "lead_stage_history"
 
     lead_id: UUID = Field(foreign_key="leads.id", index=True)
-    from_stage: LeadStage | None = Field(default=None)
-    to_stage: LeadStage
+    from_stage: str | None = Field(default=None, sa_type=String(50))
+    to_stage: str = Field(sa_type=String(50))
     changed_by: UUID = Field(foreign_key="users.id", index=True)
     changed_at: datetime = Field(
         default_factory=utc_now,
