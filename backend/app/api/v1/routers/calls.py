@@ -81,7 +81,7 @@ async def agent_websocket(websocket: WebSocket) -> None:
         await manager.disconnect_agent()
 
 
-@router.websocket("/ws/calls/{call_id}")
+@router.websocket("/ws/{call_id}")
 async def frontend_websocket(websocket: WebSocket, call_id: str) -> None:
     """
     WebSocket endpoint for Frontend clients to receive call updates.
