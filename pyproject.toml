@@ -19,4 +19,5 @@ dependencies = [
     "pyjwt>=2.10.1",
     "python-jose>=3.5.0",
     "sqlmodel>=0.0.31",
+    "websockets>=12.0",
 ]

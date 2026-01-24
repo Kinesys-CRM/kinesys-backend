@@ -9,6 +9,7 @@ from typing import Sequence, Union
 import sqlmodel
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 # revision identifiers, used by Alembic.
@@ -20,13 +21,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # NOTE: We use VARCHAR instead of native PostgreSQL enums for flexibility.
+    # Python enums in the model provide validation; DB stores as strings.
+
     # Create tags table
     op.create_table('tags',
         sa.Column('id', sa.Uuid(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
-        sa.Column('color', sqlmodel.sql.sqltypes.AutoString(length=7), nullable=False),
+        sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
+        sa.Column('color', sqlmodel.sql.sqltypes.AutoString(length=7), nullable=False, server_default='#3B82F6'),
         sa.Column('user_id', sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
@@ -34,46 +38,50 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_tags_id'), 'tags', ['id'], unique=False)
     op.create_index(op.f('ix_tags_user_id'), 'tags', ['user_id'], unique=False)
+    op.create_index('ix_tags_user_name', 'tags', ['user_id', 'name'], unique=True)
 
-    # Create leads table
-    op.create_table('leads',
-        sa.Column('id', sa.Uuid(), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('first_name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
-        sa.Column('last_name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
-        sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
-        sa.Column('phone', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
-        sa.Column('mobile_no', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
-        sa.Column('company', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
-        sa.Column('organization', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
-        sa.Column('website', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
-        sa.Column('job_title', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True),
-        sa.Column('industry', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True),
-        sa.Column('source', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False, server_default='Other'),
-        sa.Column('stage', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False, server_default='new'),
-        sa.Column('temperature', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False, server_default='cold'),
-        sa.Column('lead_score', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('annual_revenue', sa.Numeric(precision=15, scale=2), nullable=True),
-        sa.Column('employee_count', sa.Integer(), nullable=True),
-        sa.Column('territory', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True),
-        sa.Column('notes', sa.Text(), nullable=True),
-        sa.Column('interests', sa.JSON(), nullable=True),
-        sa.Column('custom_fields', sa.JSON(), nullable=True),
-        sa.Column('user_id', sa.Uuid(), nullable=False),
-        sa.Column('assigned_to', sa.Uuid(), nullable=True),
-        sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ondelete='SET NULL'),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id')
-    )
+    # Create leads table with correct types matching the model
+    # Using VARCHAR for enum fields - Python enums validate, DB stores strings
+    op.execute("""
+        CREATE TABLE leads (
+            id UUID PRIMARY KEY,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+            updated_at TIMESTAMP WITH TIME ZONE,
+            deleted_at TIMESTAMP WITH TIME ZONE,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            first_name VARCHAR(100) NOT NULL,
+            last_name VARCHAR(100) NOT NULL,
+            email VARCHAR(255),
+            phone VARCHAR(50),
+            mobile_no VARCHAR(50),
+            company VARCHAR(255),
+            organization VARCHAR(255),
+            website VARCHAR(500),
+            job_title VARCHAR(100),
+            industry VARCHAR(100),
+            source VARCHAR(50) NOT NULL DEFAULT 'Other',
+            stage VARCHAR(50) NOT NULL DEFAULT 'new',
+            temperature VARCHAR(20) NOT NULL DEFAULT 'cold',
+            lead_score INTEGER NOT NULL DEFAULT 0,
+            annual_revenue VARCHAR(50),
+            employee_count VARCHAR(50),
+            territory VARCHAR(100),
+            notes TEXT,
+            last_activity_at TIMESTAMP WITH TIME ZONE,
+            interests JSONB NOT NULL DEFAULT '[]'::JSONB,
+            custom_fields JSONB NOT NULL DEFAULT '{}'::JSONB,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            assigned_to UUID REFERENCES users(id) ON DELETE SET NULL
+        );
+    """)
     op.create_index(op.f('ix_leads_id'), 'leads', ['id'], unique=False)
     op.create_index(op.f('ix_leads_user_id'), 'leads', ['user_id'], unique=False)
     op.create_index(op.f('ix_leads_assigned_to'), 'leads', ['assigned_to'], unique=False)
     op.create_index(op.f('ix_leads_stage'), 'leads', ['stage'], unique=False)
     op.create_index(op.f('ix_leads_email'), 'leads', ['email'], unique=False)
     op.create_index(op.f('ix_leads_company'), 'leads', ['company'], unique=False)
+    op.create_index('ix_leads_user_stage', 'leads', ['user_id', 'stage'], unique=False)
+    op.create_index('ix_leads_user_active', 'leads', ['user_id', 'is_active'], unique=False)
 
     # Create lead_tags junction table
     op.create_table('lead_tags',
@@ -87,22 +95,24 @@ def upgrade() -> None:
     op.create_index('ix_lead_tags_lead_id', 'lead_tags', ['lead_id'], unique=False)
     op.create_index('ix_lead_tags_tag_id', 'lead_tags', ['tag_id'], unique=False)
 
-    # Create lead_stage_history table
-    op.create_table('lead_stage_history',
-        sa.Column('id', sa.Uuid(), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('lead_id', sa.Uuid(), nullable=False),
-        sa.Column('from_stage', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
-        sa.Column('to_stage', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
-        sa.Column('changed_by', sa.Uuid(), nullable=True),
-        sa.Column('notes', sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(['changed_by'], ['users.id'], ondelete='SET NULL'),
-        sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id')
-    )
+    # Create lead_stage_history table with correct types
+    # Using VARCHAR for stage fields - Python enums validate, DB stores strings
+    op.execute("""
+        CREATE TABLE lead_stage_history (
+            id UUID PRIMARY KEY,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+            updated_at TIMESTAMP WITH TIME ZONE,
+            lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+            from_stage VARCHAR(50),
+            to_stage VARCHAR(50) NOT NULL,
+            changed_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+            changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+            notes TEXT
+        );
+    """)
     op.create_index(op.f('ix_lead_stage_history_id'), 'lead_stage_history', ['id'], unique=False)
     op.create_index(op.f('ix_lead_stage_history_lead_id'), 'lead_stage_history', ['lead_id'], unique=False)
+    op.create_index('ix_lead_stage_history_changed_by', 'lead_stage_history', ['changed_by'], unique=False)
 
 
 def downgrade() -> None:

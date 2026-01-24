@@ -54,6 +54,10 @@ async def get_current_user(
             detail="Authorization header required",
         )
 
+    # Strip "Bearer " prefix if present (standard OAuth2 format)
+    if token.startswith("Bearer "):
+        token = token[7:]
+
     payload = decode_access_token(token)
     if not payload or "sub" not in payload:
         raise HTTPException(

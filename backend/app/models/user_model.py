@@ -1,4 +1,6 @@
+from datetime import datetime
 from typing import TYPE_CHECKING
+from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import EmailStr
 
@@ -21,6 +23,13 @@ class User(BaseUUIDModel, UserBase, table=True):
     full_name: str | None = Field(default=None)
     picture_url: str | None = Field(default=None)
     google_credentials_json: str | None = Field(default=None)  # Serialized Google credentials
+
+    # JWT Refresh token fields
+    refresh_token: str | None = Field(default=None, index=True)
+    refresh_token_expires: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # Must be timezone-aware to match UTC datetimes
+    )
 
     # Relationships
     # mails: list["Mail"] = Relationship(
