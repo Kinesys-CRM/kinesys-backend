@@ -19,9 +19,10 @@ from app.services.websocket_manager import manager
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+ws_router = APIRouter()  # Separate router for WebSocket routes (registered at root)
 
 
-@router.websocket("/ws/agent")
+@ws_router.websocket("/ws/agent")
 async def agent_websocket(websocket: WebSocket) -> None:
     """
     WebSocket endpoint for AI Agent connections.
@@ -81,7 +82,7 @@ async def agent_websocket(websocket: WebSocket) -> None:
         await manager.disconnect_agent()
 
 
-@router.websocket("/ws/{call_id}")
+@ws_router.websocket("/ws/calls/{call_id}")
 async def frontend_websocket(websocket: WebSocket, call_id: str) -> None:
     """
     WebSocket endpoint for Frontend clients to receive call updates.
