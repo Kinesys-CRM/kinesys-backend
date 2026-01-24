@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.api import router
+from app.api.v1.routers.calls import ws_router
 from app.core.config import settings
 from app.api.deps import get_db
 
@@ -31,6 +32,7 @@ app.add_middleware(
 
 # Routers
 app.include_router(router, prefix=settings.API_V1_STR)
+app.include_router(ws_router)  # WebSocket routes at root level
 
 @app.get("/")
 def read_root():
