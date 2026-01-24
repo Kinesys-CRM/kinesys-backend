@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     DATABASE_PORT: int
     DATABASE_NAME: str
 
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str 
+    GOOGLE_REDIRECT_URI: str
+
     ASYNC_DATABASE_URI: PostgresDsn | str = ""
 
     @field_validator("ASYNC_DATABASE_URI", mode="after")
@@ -57,7 +61,7 @@ class Settings(BaseSettings):
     MODEL_TEMPERATURE: float = 0.1
     MODEL_TOP_P: float = 0.95
 
-    model_config = SettingsConfigDict(case_sensitive=True, env_file="../.env")
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
 settings = Settings()
 

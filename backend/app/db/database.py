@@ -1,6 +1,7 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 from app.core.config import settings # Assuming you have a settings file
@@ -21,7 +22,7 @@ engine = create_async_engine(
 
 # Create a sessionmaker factory
 # This factory will create new AsyncSession objects when called
-AsyncSessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     autoflush=False,
