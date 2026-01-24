@@ -41,8 +41,8 @@ class Booking(BaseUUIDModel, SoftDeleteMixin, table=True):
     email: str = Field(max_length=255, nullable=False, index=True)
     phone: str = Field(max_length=50, nullable=False)
 
-    # Optional link to lead/contact
-    contact_id: UUID | None = Field(default=None, foreign_key="lead.id", nullable=True)
+    # Optional link to lead/contact (no FK constraint - may reference external CRM)
+    contact_id: UUID | None = Field(default=None, nullable=True, index=True)
 
     # Booking status
     status: str = Field(default=BookingStatus.CONFIRMED.value, max_length=20)

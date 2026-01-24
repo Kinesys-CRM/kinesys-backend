@@ -13,7 +13,6 @@ from app.models.enums import LeadSource, LeadStage, LeadTemperature
 
 if TYPE_CHECKING:
     from app.models.user_model import User
-    from app.models.calendar_event_link_model import CalendarEventLink
 
 
 class LeadTagLink(SQLModel, table=True):
@@ -107,7 +106,7 @@ class Lead(BaseUUIDModel, LeadBase, SoftDeleteMixin, table=True):
     assignee: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Lead.assigned_to]"},
     )
-    calendar_events: list["CalendarEventLink"] = Relationship(back_populates="lead")
+    # Note: Calendar events are linked via CalendarEventLink.lead_id (no ORM relationship)
 
     __table_args__ = (
         Index("ix_leads_user_stage", "user_id", "stage"),

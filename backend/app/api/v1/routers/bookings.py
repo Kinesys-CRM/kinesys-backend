@@ -75,13 +75,13 @@ async def get_availability(
     # Get booked slots from database
     booked_slots = await booking_crud.get_booked_slots(db, start_date, end_date)
 
-    # Generate available slots
+    # Generate available slots (9 AM to 8 PM working hours)
     available = booking_crud.generate_available_slots(
         booked_slots_utc=booked_slots,
         timezone_str=timeZone,
         days=7,
         start_hour=9,
-        end_hour=17,
+        end_hour=20,  # 8 PM
         slot_duration_minutes=60,
     )
 
