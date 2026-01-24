@@ -4,23 +4,6 @@ ARG UV_VERSION=0.7.18
 # Stage 1: builder - for installing dependencies and the project
 FROM python:3.13-slim-bookworm AS builder
 
-# Install system dependencies for WeasyPrint
-RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libglib2.0-dev \
-    libcairo2 \
-    libcairo2-dev \
-    libpango-1.0-0 \
-    libpango1.0-dev \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf-2.0-0 \
-    libgdk-pixbuf2.0-dev \
-    libfontconfig1 \
-    libfontconfig1-dev \
-    shared-mime-info \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -44,18 +27,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Stage 2: final - a minimal image
 FROM python:3.13-slim-bookworm
-
-# Install runtime dependencies for WeasyPrint (lighter than dev packages)
-RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf-2.0-0 \
-    libfontconfig1 \
-    shared-mime-info \
-    fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app

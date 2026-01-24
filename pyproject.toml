@@ -1,23 +1,22 @@
 [project]
-name = "intellipost"
+name = "kinesys-backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "alembic>=1.16.5",
-    "fastapi>=0.116.1",
-    "pydantic[email]>=2.11.9",
-    "pydantic-ai>=1.0.6",
-    "pydantic-settings>=2.10.1",
-    "sqlmodel>=0.0.24",
-    "asyncpg>=0.30.0",
+    "alembic>=1.18.1",
+    "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
+    "fastapi>=0.128.0",
+    "google-api-python-client>=2.188.0",
+    "google-auth-oauthlib>=1.2.4",
+    "jinja2>=3.1.6",
     "passlib>=1.7.4",
+    "pydantic-ai>=1.47.0",
+    "pydantic-settings>=2.12.0",
+    "pydantic[email]>=2.12.5",
     "pyjwt>=2.10.1",
     "python-jose>=3.5.0",
-    "bcrypt>=4.0.0,<4.1.0",
-    "pypdf2>=3.0.1",
-    "jinja2>=3.1.6",
-    "textstat>=0.7.10",
+    "sqlmodel>=0.0.31",
 ]
-
