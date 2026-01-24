@@ -16,4 +16,3 @@ class User(BaseUUIDModel, UserBase, table=True):
 
     hashed_password: str | None = Field(default=None, nullable=False, index=True)
     mails: list["Mail"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"})
-    google_refresh_token: str | None  = Field(default=None)

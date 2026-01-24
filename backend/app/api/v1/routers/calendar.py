@@ -48,7 +48,10 @@ async def google_callback(request: Request):
             "token_uri": "https://oauth2.googleapis.com/token",
             }
         },
-        scopes=["https://www.googleapis.com/auth/calendar.events"],
+        scopes=["https://www.googleapis.com/auth/calendar.events",
+                "openid", 
+                "https://www.googleapis.com/auth/userinfo.email"
+                ],
         redirect_uri=settings.GOOGLE_REDIRECT_URI
     )
 
@@ -61,7 +64,7 @@ async def google_callback(request: Request):
     refresh_token= credentials.refresh_token
 
     # NOTE: Google only sends the refresh_token the FIRST time a user authorizes.
-
+    
     if not refresh_token:
         print("Warning: no refresh token returned")
 

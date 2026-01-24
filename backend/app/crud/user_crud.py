@@ -10,7 +10,14 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.exec(select(User).where(User.email == email))
         return result.first()
 
-    async def update_google_token(self,db: AsyncSession, *, user: User)
+    async def update_google_token(self,db: AsyncSession, *, user: User, refresh_token: str) -> User:
+        user.google_refresh_token= refresh_token
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return user
+    
+    
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         db_obj = User(
             username=obj_in.username,
