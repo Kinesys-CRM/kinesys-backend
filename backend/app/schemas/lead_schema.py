@@ -154,7 +154,8 @@ class LeadResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    name: str  # lead identifier (could be ID or slug)
+    id: str  # UUID as string for frontend
+    name: str  # lead identifier (alias for id, for compatibility)
     first_name: str
     last_name: str
     lead_name: str
@@ -196,8 +197,10 @@ class LeadResponse(BaseModel):
         if hasattr(data, "__dict__"):
             # It's a model instance
             lead = data
+            lead_id = str(lead.id)
             return {
-                "name": str(lead.id),
+                "id": lead_id,
+                "name": lead_id,
                 "first_name": lead.first_name,
                 "last_name": lead.last_name,
                 "lead_name": lead.lead_name,

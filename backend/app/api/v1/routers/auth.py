@@ -1,13 +1,14 @@
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Request, HTTPException, Depends, Query
+from fastapi import APIRouter, Request, HTTPException, Depends, Query, Cookie
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 import secrets
 
 from app.core.config import settings
+from app.core.jwt import REFRESH_TOKEN_EXPIRE_DAYS
 from app.api.deps import get_db, get_current_user
-from app.controllers.auth import get_authorization_url, handle_oauth_callback
+from app.controllers.auth import get_authorization_url, handle_oauth_callback, refresh_access_token, logout_user
 from app.schemas.user_schema import UserRead
 from app.models.user_model import User
 
@@ -15,6 +16,10 @@ router = APIRouter()
 
 # Frontend callback URL - where to redirect after OAuth
 FRONTEND_CALLBACK_URL = "http://localhost:5173/auth/callback"
+
+# Cookie settings
+REFRESH_TOKEN_COOKIE_NAME = "refresh_token"
+REFRESH_TOKEN_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # Convert days to seconds
 
 
 @router.get("/login")
@@ -64,10 +69,21 @@ async def google_callback(
         response.delete_cookie("oauth_state")
         return response
 
-    # Redirect to frontend with token
+    # Redirect to frontend with access token in URL
     params = urlencode({"token": result["access_token"]})
     response = RedirectResponse(f"{FRONTEND_CALLBACK_URL}?{params}")
     response.delete_cookie("oauth_state")
+
+    # Set refresh token as HttpOnly cookie (more secure than localStorage)
+    response.set_cookie(
+        key=REFRESH_TOKEN_COOKIE_NAME,
+        value=result["refresh_token"],
+        httponly=True,
+        secure=is_production,
+        samesite="lax" if is_production else "lax",
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/api/v1/auth",  # Only send cookie to auth endpoints
+    )
     return response
 
 
@@ -90,8 +106,93 @@ async def google_callback_json(
     except Exception as e:
         raise HTTPException(400, f"OAuth failed: {e}")
 
-    response = JSONResponse(result)
+    # Return tokens as JSON (refresh token also in HttpOnly cookie for browser clients)
+    response = JSONResponse({
+        "access_token": result["access_token"],
+        "token_type": result["token_type"],
+        "user": result["user"],
+    })
     response.delete_cookie("oauth_state")
+
+    # Also set refresh token as HttpOnly cookie
+    response.set_cookie(
+        key=REFRESH_TOKEN_COOKIE_NAME,
+        value=result["refresh_token"],
+        httponly=True,
+        secure=is_production,
+        samesite="lax" if is_production else "lax",
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/api/v1/auth",
+    )
+    return response
+
+
+@router.post("/refresh")
+async def refresh_token(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_TOKEN_COOKIE_NAME),
+):
+    """
+    Refresh the access token using the refresh token from HttpOnly cookie.
+
+    Returns a new access token and rotates the refresh token.
+    """
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Refresh token not found. Please log in again.",
+        )
+
+    result = await refresh_access_token(refresh_token, db)
+
+    if not result:
+        # Clear the invalid refresh token cookie
+        response = JSONResponse(
+            status_code=401,
+            content={"detail": "Invalid or expired refresh token. Please log in again."},
+        )
+        response.delete_cookie(
+            key=REFRESH_TOKEN_COOKIE_NAME,
+            path="/api/v1/auth",
+        )
+        return response
+
+    is_production = settings.MODE.value == "production"
+
+    # Return new access token
+    response = JSONResponse({
+        "access_token": result["access_token"],
+        "token_type": result["token_type"],
+    })
+
+    # Set new refresh token cookie (rotation)
+    response.set_cookie(
+        key=REFRESH_TOKEN_COOKIE_NAME,
+        value=result["refresh_token"],
+        httponly=True,
+        secure=is_production,
+        samesite="lax" if is_production else "lax",
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/api/v1/auth",
+    )
+
+    return response
+
+
+@router.post("/logout")
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Logout user - invalidate refresh token."""
+    await logout_user(current_user, db)
+
+    response = JSONResponse({"message": "Successfully logged out"})
+    response.delete_cookie(
+        key=REFRESH_TOKEN_COOKIE_NAME,
+        path="/api/v1/auth",
+    )
     return response
 
 

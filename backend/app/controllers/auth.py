@@ -3,14 +3,16 @@ Google OAuth Authentication Controller
 
 Handles the business logic for Google OAuth authentication flow.
 """
+from datetime import datetime, timezone
 from google_auth_oauthlib.flow import Flow
 from sqlmodel.ext.asyncio.session import AsyncSession
 import json
 
 from app.core.config import settings
-from app.core.jwt import create_access_token
+from app.core.jwt import create_access_token, create_refresh_token, decode_refresh_token
 from app.crud.user_crud import user_crud
 from app.schemas.user_schema import UserCreate
+from app.models.user_model import User
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
@@ -100,12 +102,17 @@ async def handle_oauth_callback(code: str, db: AsyncSession) -> dict:
         "expiry": credentials.expiry.isoformat() if credentials.expiry else None,
     })
     await user_crud.update_google_credentials(db, user=user, credentials_json=creds_json)
-    
-    # Create JWT for API auth
+
+    # Create JWT access token and refresh token
     access_token = create_access_token({"sub": str(user.id)})
-    
+    refresh_token, refresh_expires = create_refresh_token({"sub": str(user.id)})
+
+    # Store refresh token in database
+    await user_crud.update_refresh_token(db, user=user, refresh_token=refresh_token, expires=refresh_expires)
+
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
             "id": str(user.id),
@@ -115,3 +122,61 @@ async def handle_oauth_callback(code: str, db: AsyncSession) -> dict:
             "picture_url": user.picture_url,
         },
     }
+
+
+async def refresh_access_token(refresh_token: str, db: AsyncSession) -> dict | None:
+    """
+    Refresh the access token using a valid refresh token.
+
+    Implements rotating refresh tokens:
+    - Validates the provided refresh token
+    - Issues a new access token
+    - Issues a new refresh token (rotation)
+    - Invalidates the old refresh token
+
+    Returns dict with new tokens, or None if refresh token is invalid.
+    """
+    # Decode and validate the refresh token
+    payload = decode_refresh_token(refresh_token)
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+
+    # Get user and verify the refresh token matches what's stored
+    user = await user_crud.get_by_id(db, user_id)
+    if not user:
+        return None
+
+    # Verify the token matches what's in the database (prevents reuse of old tokens)
+    if user.refresh_token != refresh_token:
+        # Token doesn't match - possibly reused old token (potential token theft)
+        # Invalidate all refresh tokens for this user as a security measure
+        await user_crud.update_refresh_token(db, user=user, refresh_token=None, expires=None)
+        return None
+
+    # Check if refresh token is expired in database
+    if user.refresh_token_expires and user.refresh_token_expires < datetime.now(timezone.utc):
+        # Token expired - clear it
+        await user_crud.update_refresh_token(db, user=user, refresh_token=None, expires=None)
+        return None
+
+    # Generate new tokens (rotation)
+    new_access_token = create_access_token({"sub": str(user.id)})
+    new_refresh_token, refresh_expires = create_refresh_token({"sub": str(user.id)})
+
+    # Store new refresh token (invalidates the old one)
+    await user_crud.update_refresh_token(db, user=user, refresh_token=new_refresh_token, expires=refresh_expires)
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
+
+
+async def logout_user(user: User, db: AsyncSession) -> None:
+    """Logout user by invalidating their refresh token."""
+    await user_crud.update_refresh_token(db, user=user, refresh_token=None, expires=None)
