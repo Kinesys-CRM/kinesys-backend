@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     # OpenAI (optional - only needed if using AI features)
     OPENAI_API_KEY: str = ""
 
+    # LiveKit Configuration
+    LIVEKIT_URL: str = ""
+    LIVEKIT_API_KEY: str = ""
+    LIVEKIT_API_SECRET: str = ""
+    LIVEKIT_AGENT_NAME: str = "kinesys-agent"
+
     model_config = SettingsConfigDict(
         case_sensitive=True, 
         env_file=(".env", "../.env"),  # Check both current and parent directory
