@@ -287,3 +287,51 @@ class LeadStatusInfo(BaseModel):
 
     name: str
     color: str
+
+
+class LeadSourceInfo(BaseModel):
+    """Info about a lead source."""
+
+    value: str
+    label: str
+
+
+class LeadTemperatureInfo(BaseModel):
+    """Info about a lead temperature."""
+
+    value: str
+    label: str
+    color: str
+
+
+class LeadIndustryInfo(BaseModel):
+    """Info about a lead industry."""
+
+    value: str
+    label: str
+
+
+class LeadTerritoryInfo(BaseModel):
+    """Info about a lead territory."""
+
+    value: str
+    label: str
+
+
+class EmployeeCountInfo(BaseModel):
+    """Info about employee count range."""
+
+    value: str
+    label: str
+
+
+class LeadMetadataResponse(BaseModel):
+    """Combined metadata for lead dropdowns."""
+
+    stages: list[LeadStageInfo]
+    statuses: list[LeadStatusInfo]
+    sources: list[LeadSourceInfo]
+    temperatures: list[LeadTemperatureInfo]
+    industries: list[LeadIndustryInfo]
+    territories: list[LeadTerritoryInfo]
+    employee_counts: list[EmployeeCountInfo]

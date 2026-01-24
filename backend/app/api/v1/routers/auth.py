@@ -9,7 +9,8 @@ from app.core.config import settings
 from app.core.jwt import REFRESH_TOKEN_EXPIRE_DAYS
 from app.api.deps import get_db, get_current_user
 from app.controllers.auth import get_authorization_url, handle_oauth_callback, refresh_access_token, logout_user
-from app.schemas.user_schema import UserRead
+from app.crud.user_crud import user_crud
+from app.schemas.user_schema import UserRead, UserListItem, UserListResponse
 from app.models.user_model import User
 
 router = APIRouter()
@@ -206,4 +207,46 @@ async def get_me(current_user: User = Depends(get_current_user)):
         full_name=current_user.full_name,
         picture_url=current_user.picture_url,
         has_google_calendar=current_user.google_credentials_json is not None,
+    )
+
+
+@router.get("/users", response_model=UserListResponse)
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    search: str | None = Query(default=None, description="Search by name or email"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=100),
+):
+    """
+    Get list of users for dropdowns (assignee selection).
+    Returns all users in the system.
+    """
+    users, total_count = await user_crud.get_multi(
+        db,
+        skip=(page - 1) * page_size,
+        limit=page_size,
+    )
+
+    # Filter by search if provided
+    if search:
+        search_lower = search.lower()
+        users = [
+            u for u in users
+            if search_lower in (u.full_name or "").lower()
+            or search_lower in u.email.lower()
+            or search_lower in u.username.lower()
+        ]
+
+    return UserListResponse(
+        data=[
+            UserListItem(
+                id=u.id,
+                name=u.full_name or u.username,
+                email=u.email,
+                avatar=u.picture_url,
+            )
+            for u in users
+        ],
+        total_count=total_count,
     )

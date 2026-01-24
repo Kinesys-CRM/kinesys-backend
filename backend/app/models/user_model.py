@@ -8,6 +8,7 @@ from .base_model import BaseUUIDModel
 
 if TYPE_CHECKING:
     from .mail_model import Mail
+    from .calendar_event_link_model import CalendarEventLink
 
 
 class UserBase(SQLModel):
@@ -35,3 +36,6 @@ class User(BaseUUIDModel, UserBase, table=True):
     # mails: list["Mail"] = Relationship(
     #     back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"}
     # )
+    calendar_event_links: list["CalendarEventLink"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"}
+    )

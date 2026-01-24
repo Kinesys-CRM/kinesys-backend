@@ -23,3 +23,17 @@ class UserRead(BaseModel):
 class UserUpdate(BaseModel):
     username: str | None = None
     full_name: str | None = None
+
+
+class UserListItem(BaseModel):
+    """Schema for user in dropdown lists."""
+    id: UUID
+    name: str  # full_name or username
+    email: EmailStr
+    avatar: str | None = None
+
+
+class UserListResponse(BaseModel):
+    """Response for users list."""
+    data: list[UserListItem]
+    total_count: int

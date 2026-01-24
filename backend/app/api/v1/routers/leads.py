@@ -7,15 +7,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.crud import lead_crud
-from app.models.enums import LeadStage, LeadSource, LeadTemperature
+from app.models.enums import (
+    LeadStage,
+    LeadSource,
+    LeadTemperature,
+    LeadIndustry,
+    LeadTerritory,
+    EmployeeCount,
+)
 from app.models.user_model import User
 from app.schemas.lead_schema import (
+    EmployeeCountInfo,
     LeadCreate,
+    LeadIndustryInfo,
     LeadListResponse,
+    LeadMetadataResponse,
     LeadResponse,
     LeadsByStageResponse,
+    LeadSourceInfo,
     LeadStageInfo,
     LeadStatusInfo,
+    LeadTemperatureInfo,
+    LeadTerritoryInfo,
     LeadUpdate,
     TagCreate,
     TagWithIdResponse,
@@ -183,6 +196,86 @@ async def get_lead_statuses() -> list[LeadStatusInfo]:
         LeadStatusInfo(name=stage.label, color=stage.color)
         for stage in LeadStage
     ]
+
+
+@router.get("/meta/sources", response_model=list[LeadSourceInfo])
+async def get_lead_sources() -> list[LeadSourceInfo]:
+    """Get all available lead sources."""
+    return [
+        LeadSourceInfo(value=source.value, label=source.value)
+        for source in LeadSource
+    ]
+
+
+@router.get("/meta/temperatures", response_model=list[LeadTemperatureInfo])
+async def get_lead_temperatures() -> list[LeadTemperatureInfo]:
+    """Get all available lead temperatures."""
+    return [
+        LeadTemperatureInfo(value=temp.value, label=temp.label, color=temp.color)
+        for temp in LeadTemperature
+    ]
+
+
+@router.get("/meta/industries", response_model=list[LeadIndustryInfo])
+async def get_lead_industries() -> list[LeadIndustryInfo]:
+    """Get all available industries."""
+    return [
+        LeadIndustryInfo(value=industry.value, label=industry.value)
+        for industry in LeadIndustry
+    ]
+
+
+@router.get("/meta/territories", response_model=list[LeadTerritoryInfo])
+async def get_lead_territories() -> list[LeadTerritoryInfo]:
+    """Get all available territories."""
+    return [
+        LeadTerritoryInfo(value=territory.value, label=territory.value)
+        for territory in LeadTerritory
+    ]
+
+
+@router.get("/meta/employee-counts", response_model=list[EmployeeCountInfo])
+async def get_employee_counts() -> list[EmployeeCountInfo]:
+    """Get all available employee count ranges."""
+    return [
+        EmployeeCountInfo(value=ec.value, label=ec.value)
+        for ec in EmployeeCount
+    ]
+
+
+@router.get("/meta/all", response_model=LeadMetadataResponse)
+async def get_all_metadata() -> LeadMetadataResponse:
+    """Get all lead metadata in one request (for dropdowns)."""
+    return LeadMetadataResponse(
+        stages=[
+            LeadStageInfo(name=stage.value, label=stage.label, color=stage.color)
+            for stage in LeadStage
+        ],
+        statuses=[
+            LeadStatusInfo(name=stage.label, color=stage.color)
+            for stage in LeadStage
+        ],
+        sources=[
+            LeadSourceInfo(value=source.value, label=source.value)
+            for source in LeadSource
+        ],
+        temperatures=[
+            LeadTemperatureInfo(value=temp.value, label=temp.label, color=temp.color)
+            for temp in LeadTemperature
+        ],
+        industries=[
+            LeadIndustryInfo(value=industry.value, label=industry.value)
+            for industry in LeadIndustry
+        ],
+        territories=[
+            LeadTerritoryInfo(value=territory.value, label=territory.value)
+            for territory in LeadTerritory
+        ],
+        employee_counts=[
+            EmployeeCountInfo(value=ec.value, label=ec.value)
+            for ec in EmployeeCount
+        ],
+    )
 
 
 # ============== Tag Endpoints ==============
