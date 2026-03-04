@@ -105,7 +105,7 @@ async def save_event_link(
         existing.lead_id = lead_id
         existing.event_title = event_title
         existing.event_start = event_start
-        existing.updated_at = datetime.utcnow()
+        existing.updated_at = datetime.now(timezone.utc)
         db.add(existing)
     else:
         new_link = CalendarEventLink(

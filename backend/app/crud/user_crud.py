@@ -1,20 +1,24 @@
+"""CRUD operations for User module."""
+
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.user_model import User
-from app.schemas.user_schema import UserCreate, UserUpdate
-from app.crud.base_crud import CRUDBase
+from app.schemas.user_schema import UserCreate
 
 
-class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
+class UserCRUD:
+
+    async def get(self, db: AsyncSession, user_id: UUID) -> User | None:
+        return await db.get(User, user_id)
 
     async def get_by_id(self, db: AsyncSession, user_id: str | UUID) -> User | None:
-        """Get user by ID (string or UUID)."""
         if isinstance(user_id, str):
             user_id = UUID(user_id)
-        return await self.get(db, id=user_id)
+        return await db.get(User, user_id)
 
     async def get_by_email(self, db: AsyncSession, email: str) -> User | None:
         result = await db.exec(select(User).where(User.email == email))
@@ -31,6 +35,20 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
             select(User).where((User.google_id == google_id) | (User.email == email))
         )
         return result.first()
+
+    async def get_multi(
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100
+    ) -> tuple[list[User], int]:
+        # Get users
+        query = select(User).offset(skip).limit(limit)
+        result = await db.exec(query)
+        users = list(result.all())
+
+        # Get total count
+        count_result = await db.exec(select(User))
+        total = len(count_result.all())
+
+        return users, total
 
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         db_obj = User(**obj_in.model_dump())
@@ -60,7 +78,6 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
         refresh_token: str | None,
         expires: datetime | None,
     ) -> User:
-        """Update user's refresh token and expiry."""
         user.refresh_token = refresh_token
         user.refresh_token_expires = expires
         db.add(user)
@@ -69,9 +86,8 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
         return user
 
     async def get_by_refresh_token(self, db: AsyncSession, refresh_token: str) -> User | None:
-        """Get user by refresh token."""
         result = await db.exec(select(User).where(User.refresh_token == refresh_token))
         return result.first()
 
 
-user_crud = UserCRUD(User)
+user_crud = UserCRUD()

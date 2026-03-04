@@ -251,10 +251,6 @@ async def get_all_metadata() -> LeadMetadataResponse:
             LeadStageInfo(name=stage.value, label=stage.label, color=stage.color)
             for stage in LeadStage
         ],
-        statuses=[
-            LeadStatusInfo(name=stage.label, color=stage.color)
-            for stage in LeadStage
-        ],
         sources=[
             LeadSourceInfo(value=source.value, label=source.value)
             for source in LeadSource

@@ -181,7 +181,7 @@ async def test_user_with_calendar(db_session: AsyncSession) -> User:
         "client_id": "test_client_id",
         "client_secret": "test_client_secret",
         "scopes": ["https://www.googleapis.com/auth/calendar"],
-        "expiry": (datetime.utcnow() + timedelta(hours=1)).isoformat(),
+        "expiry": (datetime.now() + timedelta(hours=1)).isoformat(),
     }
     user = User(
         id=uuid4(),
