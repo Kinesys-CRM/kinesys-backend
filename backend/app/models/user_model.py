@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+
 from sqlalchemy import DateTime
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import EmailStr
@@ -7,7 +8,6 @@ from pydantic import EmailStr
 from .base_model import BaseUUIDModel
 
 if TYPE_CHECKING:
-    from .mail_model import Mail
     from .calendar_event_link_model import CalendarEventLink
 
 
@@ -33,9 +33,6 @@ class User(BaseUUIDModel, UserBase, table=True):
     )
 
     # Relationships
-    # mails: list["Mail"] = Relationship(
-    #     back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"}
-    # )
     calendar_event_links: list["CalendarEventLink"] = Relationship(
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"}
     )

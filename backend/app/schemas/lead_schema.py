@@ -275,16 +275,12 @@ class LeadsByStageResponse(BaseModel):
 # ============== Stage/Status Metadata ==============
 
 class LeadStageInfo(BaseModel):
-    """Info about a lead stage."""
-
     name: str
     label: str
     color: str
 
 
 class LeadStatusInfo(BaseModel):
-    """Info about a lead status."""
-
     name: str
     color: str
 
@@ -329,7 +325,6 @@ class LeadMetadataResponse(BaseModel):
     """Combined metadata for lead dropdowns."""
 
     stages: list[LeadStageInfo]
-    statuses: list[LeadStatusInfo]
     sources: list[LeadSourceInfo]
     temperatures: list[LeadTemperatureInfo]
     industries: list[LeadIndustryInfo]
