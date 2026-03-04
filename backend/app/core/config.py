@@ -50,9 +50,6 @@ class Settings(BaseSettings):
             )
         return v
 
-    # OpenAI (optional - only needed if using AI features)
-    OPENAI_API_KEY: str = ""
-
     # LiveKit Configuration
     LIVEKIT_URL: str = ""
     LIVEKIT_API_KEY: str = ""

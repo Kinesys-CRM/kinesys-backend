@@ -10,21 +10,19 @@ from app.api.deps import get_db
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# CORS: When allow_credentials=True, allow_origins cannot be "*"
-# Specify the frontend origin(s) explicitly
 ALLOWED_ORIGINS = [
     # Development
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:3000",  # Alternative dev port
+    "http://localhost:5173",
+    "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
     # Production
     "https://remiscus.me",
     "https://www.remiscus.me",
-    "https://app.remiscus.me",  # If frontend is deployed here
+    "https://app.remiscus.me",
 ]
 
 app.add_middleware(
@@ -35,27 +33,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
 app.include_router(router, prefix=settings.API_V1_STR)
-app.include_router(ws_router)  # WebSocket routes at root level
+app.include_router(ws_router)
+
 
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to the Intellipost API"}
+def root():
+    return {"message": f"Welcome to the {settings.PROJECT_NAME} API"}
 
-@app.get("/db_check")
-async def db_check(db:AsyncSession = Depends(get_db)):
+
+@app.get("/health")
+async def health_check(db: AsyncSession = Depends(get_db)):
     try:
-        result= await db.execute(text("SELECT 1"))
-
+        result = await db.execute(text("SELECT 1"))
         result.scalar()
-        return{
-            "status":"healthy",
-            "database":"connected"
-        }
+        return {"status": "healthy", "database": "connected"}
     except Exception as e:
-        return {
-            "status":"unhealthy",
-            "database":"disconnected",
-            "error":str(e)
-        }
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
